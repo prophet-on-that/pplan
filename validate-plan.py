@@ -193,7 +193,7 @@ def print_plan(plan: Plan, render_index = None):
 
     print(
         tabulate(
-            sorted(resource_table, key=lambda row: row[3]), # Sort by end
+            sorted(resource_table, key=lambda row: row[0]), # Sort by id
             headers=resource_table_headers,
             tablefmt="mixed_grid"
         )
