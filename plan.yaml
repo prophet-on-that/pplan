@@ -1,0 +1,44 @@
+tasks:
+  - id: my-task                 # Optional, auto-inc if not provided
+    name: My super task
+    work: 4                     # Work required in given units
+    contraints:                 # Optional array of constraints
+      - taskId: 4
+        type: fs
+        # Finish-to-start: task can't begin until other task ends
+        # Start-to-start: task can't start until other task starts
+        # Finish-to-finish: task can't end until other task ends
+        # Start-to-finish: task can't end until other task starts
+        lag: -1                 # Optional lag in units, can be negative
+resources:
+  - id: jdoe                    # Optional, auto-inc
+    name: John Doe
+    # Boolean array of availability per week/unit. Consider better
+    # representation. Also, might want to enter absolute dates for
+    # when running over time
+    availability:
+    - true
+    - false
+    - true
+    - false
+assignment:
+  - taskId: my-task
+    # Array of assignments per week/unit (each entry an array of
+    # resource ids
+    assignment:
+      - [ jdoe ]
+
+# Program operation:
+  # Parse input and validate
+
+  # For each task:
+    # Ensure assignments valid (no one assigned on weeks they cannot do)
+    # Ensure assigned weeks match input work
+    # Calculate start and end date
+
+  # With durations:
+    # Ensure constraints satisfied for each task
+
+  # Print:
+    # Per-task, start and end time
+    # Per-resource, percentage utilisation/number unassigned weeks
