@@ -170,7 +170,6 @@ def print_plan(plan: Plan, render_index = None):
         )
     )
 
-    # Print a table for each resource showing resource id, resource name, allocation count, allocation (%), allocation per index
     resource_table = []
     resource_table_headers = [
         'Resource id',
