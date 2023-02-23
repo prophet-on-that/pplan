@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Tuple, Optional, Set
 from itertools import dropwhile
+from tabulate import tabulate
 
 TaskId = str
 ResourceId = str
@@ -126,6 +127,76 @@ def validate_constraints(plan: Plan) -> bool:
                     return False
     return True
 
+# Pre: plan is valid
+def print_plan(plan: Plan):
+    task_table = []
+    task_table_headers = [
+        'Task name',
+        'Start',
+        'End',
+        'Allocation',
+        'Allocation (%)',
+        *list(range(plan.max_duration))
+    ]
+    for task in plan.tasks:
+        duration = task.get_duration()
+        start = duration[0] if duration is not None else None
+        end = duration[1] if duration is not None else None
+        assignment = [
+            ', '.join(resource_ids)
+            for resource_ids in task.assignment + (plan.max_duration - len(task.assignment)) * [set()]
+        ]
+        assigned_work = task.get_assigned_work()
+        alloc_pct = 100 * assigned_work / task.work
+        task_table.append(
+            [
+                task.name,
+                start,
+                end,
+                f"{assigned_work} / {task.work}",
+                f"{alloc_pct:.1f}",
+                *assignment
+            ]
+        )
+
+    print(
+        tabulate(
+            sorted(task_table, key=lambda row: row[3]), # Sort by end
+            headers=task_table_headers,
+            tablefmt="mixed_grid"
+        )
+    )
+
+    # Print a table for each resource showing resource id, resource name, allocation count, allocation (%), allocation per index
+    resource_table = []
+    resource_table_headers = [
+        'Resource id',
+        'Allocation',
+        'Allocation (%)',
+        *list(range(plan.max_duration))
+    ]
+    for resource in plan.resources:
+        assignment = plan.get_resource_assignment(resource.resource_id)
+        assigned = sum([1 for task_ids in assignment if task_ids])
+        available = sum([int(b) for b in resource.availability])
+        alloc_pct = 100 * assigned / available
+        resource_table.append(
+            [
+                resource.resource_id,
+                f"{assigned} / {available}",
+                f"{alloc_pct:.1f}",
+                *[','.join(task_ids) for task_ids in assignment]
+            ]
+        )
+
+    print(
+        tabulate(
+            sorted(resource_table, key=lambda row: row[3]), # Sort by end
+            headers=resource_table_headers,
+            tablefmt="mixed_grid"
+        )
+    )
+
 plan = Plan(
     tasks=[
         Task(
@@ -173,8 +244,9 @@ plan = Plan(
 )
 
 def main():
-    if not validate_plan(plan) or validate_constraints(plan):
+    if not validate_plan(plan) or not validate_constraints(plan):
         exit(1)
+    print_plan(plan)
 
 if __name__ == '__main__':
     main()
