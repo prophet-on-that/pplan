@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Set
 from itertools import dropwhile
 
 TaskId = str
@@ -17,7 +17,7 @@ class Task:
     name: str
     work: int
     constraints: List[Constraint] = field(default_factory=list)
-    assignment: List[List[ResourceId]] = field(default_factory=list)
+    assignment: List[Set[ResourceId]] = field(default_factory=list)
 
     def get_assigned_work(self) -> int:
         return sum([len(resource_ids) for resource_ids in self.assignment])
@@ -46,6 +46,18 @@ class Plan:
     tasks: List[Task]
     resources: List[Resource]
 
+    def __post_init__(self):
+        task_max_durations = {len(task.assignment) for task in self.tasks}
+        self.max_duration = max(task_max_durations) if task_max_durations else 0
+
+    def get_resource_assignment(self, resource_id) -> List[int]:
+        assignment = [0] * self.max_duration
+        for task in self.tasks:
+            for i, resource_ids in enumerate(task.assignment):
+                if resource_id in resource_ids:
+                    assignment[i] += 1
+        return assignment
+
 def validate_plan(plan: Plan) -> bool:
     # Assert distinct task ids
     task_ids = {task.task_id for task in plan.tasks}
@@ -72,16 +84,13 @@ def validate_plan(plan: Plan) -> bool:
 
     resources_dict = {resource.resource_id: resource for resource in plan.resources}
 
-    # Assert no one assigned at time they cannot do
-    # TODO: this needs to be aggregated cross-task to check that no
-    # one is assigned to more than one slot at once
-    for task in plan.tasks:
-        for i, resource_ids in enumerate(task.assignment):
-            for resource_id in resource_ids:
-                resource = resources_dict[resource_id]
-                if len(resource.availability) <= i or not resource.availability[i]:
-                    print(f"Resource not available at given time (task id: {task.task_id}, resource id: {resource_id}, index: {i})")
-                    return False
+    for resource in plan.resources:
+        assignment = plan.get_resource_assignment(resource.resource_id)
+        for i, count in enumerate(assignment):
+            availability = int(resource.availability[i]) if i < len(resource.availability) else 0
+            if count > availability:
+                print(f"Resource overallocated (resource id: {resource.resource_id}, index: {i}, allocations: {count}, availability: {availability})")
+                return False
 
     return True
 
@@ -124,11 +133,11 @@ plan = Plan(
             "Market data ingest and analysis",
             work=2,
             assignment=[
-                [],
-                ['kdav'],
-                [],
-                ['kdav'],
-                []
+                {},
+                {'kdav'},
+                {},
+                {'kdav'},
+                {}
             ]
         ),
         Task(
@@ -136,7 +145,8 @@ plan = Plan(
             "blah",
             work=3,
             assignment=[
-                ['kdav']
+                {'kdav'},
+                {'kdav'}
             ],
             constraints=[
                 Constraint(
