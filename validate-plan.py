@@ -1,21 +1,39 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Tuple, Optional
+from itertools import dropwhile
 
 TaskId = str
 ResourceId = str
 
 @dataclass
 class Constraint:
-    constraintType: str         # TODO: make enum
-    taskId: TaskId
-    lag: int
+    constraint_type: str         # TODO: make enum or subclasses
+    task_id: TaskId
+    lag: int = 0
 
 @dataclass
 class Task:
     task_id: TaskId
     name: str
     work: int
-    contraints: List[Constraint] = field(default_factory=list)
+    constraints: List[Constraint] = field(default_factory=list)
+    assignment: List[List[ResourceId]] = field(default_factory=list)
+
+    def get_assigned_work(self) -> int:
+        return sum([len(resource_ids) for resource_ids in self.assignment])
+
+    def get_duration(self) -> Optional[Tuple[int, int]]:
+        assigned = list(enumerate([len(resource_ids) > 0 for resource_ids in self.assignment]))
+        dropped = list(dropwhile(lambda tup: not tup[1], assigned))
+        if not dropped:
+            return None
+        start_index = dropped[0][0]
+
+        assigned.reverse()
+        end_dropped = list(dropwhile(lambda tup: not tup[1], assigned))
+        end_index = end_dropped[0][0]
+
+        return start_index, end_index
 
 @dataclass
 class Resource:
@@ -24,15 +42,9 @@ class Resource:
     availability: List[bool]
 
 @dataclass
-class Assignment:
-    task_id: str
-    assignments: List[List[ResourceId]]
-
-@dataclass
 class Plan:
     tasks: List[Task]
     resources: List[Resource]
-    assignments: List[Assignment]
 
 def validate_plan(plan: Plan) -> bool:
     # Assert distinct task ids
@@ -47,14 +59,8 @@ def validate_plan(plan: Plan) -> bool:
         print("Duplicate resource ids!")
         return False
 
-    # Check tasks referenced in assignments are defined
-    assignment_task_ids = {assignment.task_id for assignment in plan.assignments}
-    if assignment_task_ids != task_ids:
-        print("Unknown tasks:", assignment_task_ids - task_ids)
-        return False
-    
     # Check resources referenced in assignments are defined
-    assignment_resource_ids = {resource_id for assignment in plan.assignments for resource_ids in assignment.assignments for resource_id in resource_ids}
+    assignment_resource_ids = {resource_id for task in plan.tasks for resource_ids in task.assignment for resource_id in resource_ids}
     if assignment_resource_ids != resource_ids:
         print("Unknown resources:", assignment_resource_ids - resource_ids)
         return False
@@ -64,6 +70,51 @@ def validate_plan(plan: Plan) -> bool:
         print("Task with non-positive work")
         return False
 
+    resources_dict = {resource.resource_id: resource for resource in plan.resources}
+
+    # Assert no one assigned at time they cannot do
+    # TODO: this needs to be aggregated cross-task to check that no
+    # one is assigned to more than one slot at once
+    for task in plan.tasks:
+        for i, resource_ids in enumerate(task.assignment):
+            for resource_id in resource_ids:
+                resource = resources_dict[resource_id]
+                if len(resource.availability) <= i or not resource.availability[i]:
+                    print(f"Resource not available at given time (task id: {task.task_id}, resource id: {resource_id}, index: {i})")
+                    return False
+
+    return True
+
+def validate_constraints(plan: Plan) -> bool:
+    durations = {task.task_id: task.get_duration() for task in plan.tasks}
+    for task in plan.tasks:
+        task_id = task.task_id
+        duration = durations[task_id]
+        if duration is not None:
+            start, finish = duration
+            for constraint in task.constraints:
+                other_duration = durations[constraint.task_id]
+                ctype = constraint.constraint_type
+                lag = constraint.lag
+                if ctype == 'ss':
+                    if other_duration is None or other_duration[0] + lag > start:
+                        print(f"Constraint violation (task id: {task_id}, constraint type: {ctype}, other task id: {constraint.task_id}, task start: {start}, other start + lag: {other_duration[0] + lag})")
+                        return False
+                elif ctype == 'sf':
+                    if other_duration is None or other_duration[0] + lag > finish:
+                        print(f"Constraint violation (task id: {task_id}, constraint type: {ctype}, other task id: {constraint.task_id}, task finish: {finish}, other start + lag: {other_duration[0] + lag})")
+                        return False
+                elif ctype == 'fs':
+                    if other_duration is None or other_duration[1] + lag > start:
+                        print(f"Constraint violation (task id: {task_id}, constraint type: {ctype}, other task id: {constraint.task_id}, task start: {start}, other finish + lag: {other_duration[1] + lag})")
+                        return False
+                elif ctype == 'ff':
+                    if other_duration is None or other_duration[1] + lag > finish:
+                        print(f"Constraint violation (task id: {task_id}, constraint type: {ctype}, other task id: {constraint.task_id}, task finish: {finish}, other finish + lag: {other_duration[1] + lag})")
+                        return False
+                else:
+                    print(f'Unknown constraint type \'{ctype}\' (task id: {task.task_id})')
+                    return False
     return True
 
 plan = Plan(
@@ -71,22 +122,48 @@ plan = Plan(
         Task(
             "mktdata",
             "Market data ingest and analysis",
-            2
+            work=2,
+            assignment=[
+                [],
+                ['kdav'],
+                [],
+                ['kdav'],
+                []
+            ]
+        ),
+        Task(
+            "boo",
+            "blah",
+            work=3,
+            assignment=[
+                ['kdav']
+            ],
+            constraints=[
+                Constraint(
+                    'fs',
+                    'mktdata',
+                    lag=-2
+                )
+            ]
         )
     ],
-    resources=[],
-    assignments=[
-        Assignment(
-            'blah',
+    resources=[
+        Resource(
+            'kdav',
+            'Kunal Dav',
             [
-                ['kdav']
+                True,
+                True,
+                False,
+                True,
+                True
             ]
         )
     ]
 )
 
 def main():
-    if not validate_plan(plan):
+    if not validate_plan(plan) or validate_constraints(plan):
         exit(1)
 
 if __name__ == '__main__':
