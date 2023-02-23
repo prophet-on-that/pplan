@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import List, Tuple, Optional, Set
 from itertools import dropwhile
 from tabulate import tabulate
+from datetime import date, timedelta
 
 TaskId = str
 ResourceId = str
@@ -244,6 +245,13 @@ plan = Plan(
         )
     ]
 )
+
+def render_half_weeks(start_date: date, index: int) -> str:
+    if index % 2 == 0:
+        resolved_date = start_date + timedelta(weeks=index // 2)
+        return resolved_date.strftime('%d-%b')
+    else:
+        return ''
 
 def main():
     if not validate_plan(plan) or not validate_constraints(plan):
