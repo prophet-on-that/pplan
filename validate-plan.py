@@ -50,12 +50,12 @@ class Plan:
         task_max_durations = {len(task.assignment) for task in self.tasks}
         self.max_duration = max(task_max_durations) if task_max_durations else 0
 
-    def get_resource_assignment(self, resource_id) -> List[int]:
-        assignment = [0] * self.max_duration
+    def get_resource_assignment(self, resource_id) -> List[Set[TaskId]]:
+        assignment = [set()] * self.max_duration
         for task in self.tasks:
             for i, resource_ids in enumerate(task.assignment):
                 if resource_id in resource_ids:
-                    assignment[i] += 1
+                    assignment[i] = assignment[i] | {task.task_id}
         return assignment
 
 def validate_plan(plan: Plan) -> bool:
@@ -86,10 +86,10 @@ def validate_plan(plan: Plan) -> bool:
 
     for resource in plan.resources:
         assignment = plan.get_resource_assignment(resource.resource_id)
-        for i, count in enumerate(assignment):
+        for i, task_ids in enumerate(assignment):
             availability = int(resource.availability[i]) if i < len(resource.availability) else 0
-            if count > availability:
-                print(f"Resource overallocated (resource id: {resource.resource_id}, index: {i}, allocations: {count}, availability: {availability})")
+            if len(task_ids) > availability:
+                print(f"Resource overallocated (resource id: {resource.resource_id}, index: {i}, allocated tasks: {task_ids}, available: {bool(availability)})")
                 return False
 
     return True
