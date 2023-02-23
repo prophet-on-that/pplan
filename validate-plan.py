@@ -128,7 +128,10 @@ def validate_constraints(plan: Plan) -> bool:
     return True
 
 # Pre: plan is valid
-def print_plan(plan: Plan):
+def print_plan(plan: Plan, render_index = None):
+    if render_index is None:
+        render_index = lambda i: i
+
     task_table = []
     task_table_headers = [
         'Task name',
@@ -136,7 +139,7 @@ def print_plan(plan: Plan):
         'End',
         'Allocation',
         'Allocation (%)',
-        *list(range(plan.max_duration))
+        *[render_index(i) for i in range(plan.max_duration)]
     ]
     for task in plan.tasks:
         duration = task.get_duration()
@@ -173,7 +176,7 @@ def print_plan(plan: Plan):
         'Resource id',
         'Allocation',
         'Allocation (%)',
-        *list(range(plan.max_duration))
+        *[render_index(i) for i in range(plan.max_duration)]
     ]
     for resource in plan.resources:
         assignment = plan.get_resource_assignment(resource.resource_id)
