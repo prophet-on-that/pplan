@@ -181,14 +181,15 @@ def print_plan(plan: Plan, render_index = None):
     for resource in plan.resources:
         assignment = plan.get_resource_assignment(resource.resource_id)
         assigned = sum([1 for task_ids in assignment if task_ids])
-        available = sum([int(b) for b in resource.availability])
+        availability = resource.availability + [False] * (plan.max_duration - len(resource.availability))
+        available = sum([int(b) for b in availability])
         alloc_pct = 100 * assigned / available
         resource_table.append(
             [
                 resource.resource_id,
                 f"{assigned} / {available}",
                 f"{alloc_pct:.1f}",
-                *[','.join(task_ids) for task_ids in assignment]
+                *['--' if not available else ','.join(task_ids) for task_ids, available in zip(assignment, availability)]
             ]
         )
 
