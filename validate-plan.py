@@ -129,15 +129,20 @@ def validate_constraints(plan: Plan) -> bool:
     return True
 
 # Pre: plan is valid
-def print_plan(plan: Plan, render_index = None):
+def print_plan(plan: Plan, render_index = None, render_start_end = None):
     if render_index is None:
         render_index = lambda i: i
+
+    if render_start_end is None:
+        render_start_end = lambda i: i
 
     task_table = []
     task_table_headers = [
         'Task name',
         'Start',
+        '',
         'End',
+        '',
         'Allocation',
         'Allocation (%)',
         *[render_index(i) for i in range(plan.max_duration)]
@@ -155,8 +160,10 @@ def print_plan(plan: Plan, render_index = None):
         task_table.append(
             [
                 task.name,
-                start,
-                end,
+                start if start is not None else -1,
+                render_start_end(start) if start is not None else '',
+                end if end is not None else -1,
+                render_start_end(end) if end is not None else '',
                 f"{assigned_work} / {task.work}",
                 f"{alloc_pct:.1f}",
                 *assignment
@@ -165,7 +172,7 @@ def print_plan(plan: Plan, render_index = None):
 
     print(
         tabulate(
-            sorted(task_table, key=lambda row: row[3]), # Sort by end
+            sorted(task_table, key=lambda row: row[3]), # Sort by end index
             headers=task_table_headers,
             tablefmt="mixed_grid"
         )
