@@ -111,8 +111,12 @@ def validate_constraints(plan: Plan) -> bool:
         if duration is not None:
             start, finish = duration
             for constraint in task.constraints:
-                other_duration = durations[constraint.task_id]
                 ctype = constraint.constraint_type
+                if constraint.task_id not in durations:
+                    print(f"Unknown task in constraint (task id: {task_id}, constraint type: {ctype.name}, unknown task id: {constraint.task_id})")
+                    return False
+
+                other_duration = durations[constraint.task_id]
                 lag = constraint.lag
                 if ctype == ConstraintType.SS:
                     if other_duration is None or other_duration[0] + lag > start:
