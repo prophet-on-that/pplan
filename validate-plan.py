@@ -75,7 +75,7 @@ def validate_plan(plan: Plan) -> bool:
 
     # Check resources referenced in assignments are defined
     assignment_resource_ids = {resource_id for task in plan.tasks for resource_ids in task.assignment for resource_id in resource_ids}
-    if assignment_resource_ids != resource_ids:
+    if assignment_resource_ids - resource_ids:
         print("Unknown resources:", assignment_resource_ids - resource_ids)
         return False
 
