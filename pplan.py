@@ -264,6 +264,36 @@ def render_half_weeks(start_date: date, index: int, show_half_weeks=False) -> st
     else:
         return ''
 
+def build_half_week_availability(
+        start_date: date,
+        end_date: date,
+        holiday_weeks: Optional[Set[date]] = None,
+        availability_pattern: Optional[List[bool]] = None
+) -> List[bool]:
+    """Build pattern of half-week availability. Availability pattern of
+    half weeks is repeated between start and end dates, excluding any
+    holidays. Holidays are specified at the start of the week."""
+
+    if holiday_weeks is None:
+        holiday_weeks = set()
+    if availability_pattern is None:
+        availability_pattern = [True] # Always available in non-holiday time
+    duration_weeks = (end_date - start_date).days // 7
+    availability = [True] * (duration_weeks * 2)
+    for holiday_week in holiday_weeks:
+        index = 2 * (holiday_week - start_date).days // 7
+        if index < 0 or index >= len(availability):
+            print(f"Holiday outside project duration (holiday week: {holiday_week})", file=stderr)
+        availability[index] = False
+        availability[index + 1] = False
+
+    availability_pattern_queue = availability_pattern * len(availability)
+    for index in range(len(availability)):
+        if availability[index]:
+            availability[index] = availability_pattern_queue.pop(0)
+
+    return availability
+
 def main():
     if not validate_plan(plan) or not validate_constraints(plan):
         exit(1)
