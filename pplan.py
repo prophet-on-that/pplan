@@ -139,6 +139,9 @@ def validate_constraints(plan: Plan) -> bool:
                     return False
     return True
 
+def validate(plan: Plan) -> bool:
+    return validate_plan(plan) and validate_constraints(plan)
+
 # Pre: plan is valid
 def print_plan(plan: Plan, render_index = None, render_start_end = None):
     if render_index is None:
