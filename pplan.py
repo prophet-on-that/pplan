@@ -222,52 +222,6 @@ def print_plan(plan: Plan, render_index = None, render_start_end = None):
         )
     )
 
-plan = Plan(
-    tasks=[
-        Task(
-            "mktdata",
-            "Market data ingest and analysis",
-            work=2,
-            assignment=[
-                {},
-                {'kdav'},
-                {},
-                {'kdav'},
-                {}
-            ]
-        ),
-        Task(
-            "boo",
-            "blah",
-            work=3,
-            assignment=[
-                {'kdav'},
-                {'kdav'}
-            ],
-            constraints=[
-                Constraint(
-                    'fs',
-                    'mktdata',
-                    lag=-2
-                )
-            ]
-        )
-    ],
-    resources=[
-        Resource(
-            'kdav',
-            'Kunal Dav',
-            [
-                True,
-                True,
-                False,
-                True,
-                True
-            ]
-        )
-    ]
-)
-
 def render_half_weeks(start_date: date, index: int, show_half_weeks=False) -> str:
     resolved_date = start_date + timedelta(weeks=index // 2)
     date_str = resolved_date.strftime('%d-%b')
@@ -307,11 +261,3 @@ def build_half_week_availability(
             availability[index] = availability_pattern_queue.pop(0)
 
     return availability
-
-def main():
-    if not validate_plan(plan) or not validate_constraints(plan):
-        exit(1)
-    print_plan(plan)
-
-if __name__ == '__main__':
-    main()
