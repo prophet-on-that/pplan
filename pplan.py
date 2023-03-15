@@ -3,13 +3,20 @@ from typing import List, Tuple, Optional, Set
 from itertools import dropwhile
 from tabulate import tabulate
 from datetime import date, timedelta
+from enum import Enum
 
 TaskId = str
 ResourceId = str
 
+class ConstraintType(Enum):
+    SS = 1                      # Start-to-start
+    SF = 2                      # Start-to-finish
+    FS = 3                      # Finish-to-start
+    FF = 4                      # Finish-to-finish
+
 @dataclass
 class Constraint:
-    constraint_type: str         # TODO: make enum or subclasses
+    constraint_type: ConstraintType
     task_id: TaskId
     lag: int = 0
 
@@ -107,21 +114,21 @@ def validate_constraints(plan: Plan) -> bool:
                 other_duration = durations[constraint.task_id]
                 ctype = constraint.constraint_type
                 lag = constraint.lag
-                if ctype == 'ss':
+                if ctype == ConstraintType.SS:
                     if other_duration is None or other_duration[0] + lag > start:
-                        print(f"Constraint violation (task id: {task_id}, constraint type: {ctype}, other task id: {constraint.task_id}, task start: {start}, other start + lag: {other_duration[0] + lag})")
+                        print(f"Constraint violation (task id: {task_id}, constraint type: {ctype.name}, other task id: {constraint.task_id}, task start: {start}, other start + lag: {other_duration[0] + lag})")
                         return False
-                elif ctype == 'sf':
+                elif ctype == ConstraintType.SF:
                     if other_duration is None or other_duration[0] + lag > finish:
-                        print(f"Constraint violation (task id: {task_id}, constraint type: {ctype}, other task id: {constraint.task_id}, task finish: {finish}, other start + lag: {other_duration[0] + lag})")
+                        print(f"Constraint violation (task id: {task_id}, constraint type: {ctype.name}, other task id: {constraint.task_id}, task finish: {finish}, other start + lag: {other_duration[0] + lag})")
                         return False
-                elif ctype == 'fs':
+                elif ctype == ConstraintType.FS:
                     if other_duration is None or other_duration[1] + lag > start:
-                        print(f"Constraint violation (task id: {task_id}, constraint type: {ctype}, other task id: {constraint.task_id}, task start: {start}, other finish + lag: {other_duration[1] + lag})")
+                        print(f"Constraint violation (task id: {task_id}, constraint type: {ctype.name}, other task id: {constraint.task_id}, task start: {start}, other finish + lag: {other_duration[1] + lag})")
                         return False
-                elif ctype == 'ff':
+                elif ctype == ConstraintType.FF:
                     if other_duration is None or other_duration[1] + lag > finish:
-                        print(f"Constraint violation (task id: {task_id}, constraint type: {ctype}, other task id: {constraint.task_id}, task finish: {finish}, other finish + lag: {other_duration[1] + lag})")
+                        print(f"Constraint violation (task id: {task_id}, constraint type: {ctype.name}, other task id: {constraint.task_id}, task finish: {finish}, other finish + lag: {other_duration[1] + lag})")
                         return False
                 else:
                     print(f'Unknown constraint type \'{ctype}\' (task id: {task.task_id})')
