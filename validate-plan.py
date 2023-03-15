@@ -254,10 +254,13 @@ plan = Plan(
     ]
 )
 
-def render_half_weeks(start_date: date, index: int) -> str:
+def render_half_weeks(start_date: date, index: int, show_half_weeks=False) -> str:
+    resolved_date = start_date + timedelta(weeks=index // 2)
+    date_str = resolved_date.strftime('%d-%b')
     if index % 2 == 0:
-        resolved_date = start_date + timedelta(weeks=index // 2)
-        return resolved_date.strftime('%d-%b')
+        return date_str
+    elif show_half_weeks:
+        return date_str + ' (1/2)'
     else:
         return ''
 
